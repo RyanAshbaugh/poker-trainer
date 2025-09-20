@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export USER_ID=$(id -u)
-export GROUP_ID=$(id -g)
-echo "Using USER_ID=${USER_ID} GROUP_ID=${GROUP_ID}"
-docker compose build --no-cache
+echo "Using USER_ID=$(id -u) GROUP_ID=$(id -g)"
+USER_ID=$(id -u) GROUP_ID=$(id -g) docker compose up --build
