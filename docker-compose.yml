@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      args:
+        UID: ${UID}
+        GID: ${GID:-${UID}}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - FLASK_ENV=development
+      - PORT=5000
+    user: "${UID}:${GID:-${UID}}"
+    command: ["python", "server.py"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.development
+      args:
+        UID: ${UID}
+        GID: ${UID}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+      - CI=true
+      - UID=${UID}
+      - GID=${UID}
+    command: ["/bin/bash", "/app/entrypoint.sh"]
+    user: "${UID}:${UID}"
+

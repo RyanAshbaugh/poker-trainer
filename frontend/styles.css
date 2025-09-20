@@ -1,0 +1,12 @@
+html, body, #__next { height: 100%; margin: 0; }
+* { box-sizing: border-box; }
+
+.layout { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; height: 100%; padding: 16px; }
+.right { display: grid; grid-template-rows: auto 1fr 1fr; gap: 16px; }
+.panel { border: 1px solid #ccc; border-radius: 8px; padding: 12px; background: #fafafa; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chatlog { overflow: auto; height: 100%; display: flex; flex-direction: column; gap: 8px; }
+.chat-input { display: flex; gap: 8px; }
+.range-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 2px; }
+.cell { height: 18px; background: #e6f2ff; border: 1px solid #cce0ff; }
+
