@@ -1,6 +1,15 @@
 FROM node:20
 
+# Mirror host user to avoid root-owned node_modules
+ARG USER_ID=1001
+ARG GROUP_ID=1001
+
+RUN groupadd -g ${GROUP_ID} --non-unique appuser && \
+    useradd -u ${USER_ID} --non-unique -g appuser -m appuser
+
 WORKDIR /app
+RUN chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 3000
 

@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export HOST_UID=${HOST_UID:-$(id -u)}
-export HOST_GID=${HOST_GID:-$(id -g)}
-echo "Using HOST_UID=${HOST_UID} HOST_GID=${HOST_GID}"
+export USER_ID=$(id -u)
+export GROUP_ID=$(id -g)
+echo "Using USER_ID=${USER_ID} GROUP_ID=${GROUP_ID}"
 docker compose build --no-cache
-
