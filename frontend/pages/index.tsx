@@ -1,41 +1,27 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { useGame } from '../state/useGame';
+import { PokerTable } from '../components/three/PokerTable';
+import { Seat } from '../components/three/Seat';
+import { HoleCards } from '../components/three/HoleCards';
+import { Lights } from '../components/three/Lights';
 
 type ChatItem = { role: 'system' | 'user' | 'assistant'; content: string };
 
-function Table() {
-  const tableRef = useRef<any>();
-  return (
-    <mesh ref={tableRef} rotation-x={-Math.PI / 2} position={[0, -0.5, 0]}>
-      <cylinderGeometry args={[3.2, 3.2, 0.2, 64]} />
-      <meshStandardMaterial color="#2e7d32" />
-    </mesh>
-  );
-}
-
-function Cards() {
-  const positions = useMemo(() => [
-    [-0.3, 0, 0], [0, 0, 0],
-  ], []);
-  return (
-    <group position={[0, -0.39, 0.4] as any}>
-      {positions.map((p, i) => (
-        <mesh key={i} position={p as any} rotation-x={-Math.PI / 2}>
-          <boxGeometry args={[0.63, 0.88, 0.02]} />
-          <meshStandardMaterial color="#ffffff" />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
 export default function HomePage() {
+  const { state, startNewHand } = useGame();
   const [stage, setStage] = useState<'preflop' | 'flop' | 'turn' | 'river'>('preflop');
   const [action, setAction] = useState('');
   const [chat, setChat] = useState<ChatItem[]>([{ role: 'system', content: 'Welcome to Poker Trainer. Describe your thought, then press Ask Coach.' }]);
   const [ranges, setRanges] = useState<{ hero: string; villain: string } | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (!state) {
+      startNewHand(Math.floor(Math.random() * 1e9));
+    }
+  }, [state, startNewHand]);
 
   async function askCoach() {
     setPending(true);
@@ -60,16 +46,21 @@ export default function HomePage() {
     <div className="layout">
       <div className="panel" style={{ padding: 0 }}>
         <Canvas camera={{ position: [0, 4.5, 6], fov: 45 }}>
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[5, 10, 5]} intensity={0.8} />
-          <Table />
-          <Cards />
+          <Lights />
+          <PokerTable />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Seat key={i} index={i} label={`P${i+1}`} />
+          ))}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <HoleCards key={`h${i}`} seatIndex={i} faceUp={i === 0} />
+          ))}
           <OrbitControls />
         </Canvas>
       </div>
       <div className="right">
         <div className="panel">
           <div className="controls">
+            <button onClick={() => startNewHand(Math.floor(Math.random() * 1e9))}>New Hand</button>
             <label>
               Stage:
               <select value={stage} onChange={(e) => setStage(e.target.value as any)}>

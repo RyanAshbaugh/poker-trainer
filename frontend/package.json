@@ -21,7 +21,9 @@
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.5",
     "typescript": "5.6.2",
-    "@types/node": "20.11.30"
+    "@types/node": "20.11.30",
+    "@types/webxr": "0.5.16",
+    "@types/offscreencanvas": "2019.6.4"
   }
 }
 
