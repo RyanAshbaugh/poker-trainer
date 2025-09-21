@@ -5,9 +5,22 @@ type Props = {
   players: Player[];
   dealerIndex: number;
   board?: Card[];
+  pot?: number;
 };
 
-export function SimpleTable2D({ players, dealerIndex, board = [] }: Props) {
+function positionLabel(pos: Player['position']): string {
+  switch (pos) {
+    case 'BTN': return 'Button';
+    case 'SB': return 'Small Blind';
+    case 'BB': return 'Big Blind';
+    case 'UTG': return 'Under the Gun';
+    case 'HJ': return 'Hijack';
+    case 'CO': return 'Cutoff';
+    default: return pos;
+  }
+}
+
+export function SimpleTable2D({ players, dealerIndex, board = [], pot = 0 }: Props) {
   const rx = 300; // table radius x
   const ry = 200; // table radius y
   const seatRadiusX = rx + 50;
@@ -32,6 +45,9 @@ export function SimpleTable2D({ players, dealerIndex, board = [] }: Props) {
           ))}
         </g>
 
+        {/* Pot amount */}
+        <text x={0} y={80} textAnchor="middle" fontSize={18} fill="#000">{`Pot: ${pot}`}</text>
+
         {/* Seats */}
         {players.map((p, i) => {
           const angle = (Math.PI * 2 * i) / 6 + Math.PI;
@@ -44,10 +60,22 @@ export function SimpleTable2D({ players, dealerIndex, board = [] }: Props) {
               {isDealer && (
                 <circle r={10} fill="#fff" stroke="#555" strokeWidth={1} cx={-38} cy={-22} />
               )}
-              <text x={0} y={42} textAnchor="middle" fontSize={14} fill="#fff">{p.name}</text>
-              {p.isHero && p.hole && (
-                <text x={0} y={60} textAnchor="middle" fontSize={14} fill="#e0e0e0">{`${p.hole[0]} ${p.hole[1]}`}</text>
-              )}
+              <text x={0} y={42} textAnchor="middle" fontSize={14} fill="#000">{positionLabel(p.position)}</text>
+              {/* Stack and current bet */}
+              <text x={0} y={60} textAnchor="middle" fontSize={12} fill="#000">{`Stack: ${p.stack}`}</text>
+              <text x={0} y={74} textAnchor="middle" fontSize={12} fill="#000">{`Bet: ${p.contributedThisStreet}`}</text>
+
+              {/* Hole cards near each seat */}
+              <g transform={`translate(0, -50)`}>
+                {[0, 1].map((idx) => (
+                  <g key={idx} transform={`translate(${idx === 0 ? -18 : 18}, 0)`}>
+                    <rect x={-15} y={-20} width={30} height={40} rx={4} fill={p.isHero ? '#fff' : '#ccc'} stroke="#333" />
+                    {p.isHero && p.hole && (
+                      <text x={0} y={5} textAnchor="middle" fontSize={12} fill="#000">{p.hole[idx]}</text>
+                    )}
+                  </g>
+                ))}
+              </g>
             </g>
           );
         })}

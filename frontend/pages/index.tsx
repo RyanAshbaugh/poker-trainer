@@ -52,7 +52,7 @@ export default function HomePage() {
         {simple2D || !state ? (
           <div style={{ width: '100%', height: 480 }}>
             {state && (
-              <SimpleTable2D players={state.players} dealerIndex={state.dealerIndex} board={state.board} />
+              <SimpleTable2D players={state.players} dealerIndex={state.dealerIndex} board={state.board} pot={state.pot} />
             )}
           </div>
         ) : (
