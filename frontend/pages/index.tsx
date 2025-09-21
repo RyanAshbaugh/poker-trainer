@@ -6,6 +6,7 @@ import { PokerTable } from '../components/three/PokerTable';
 import { Seat } from '../components/three/Seat';
 import { HoleCards } from '../components/three/HoleCards';
 import { Lights } from '../components/three/Lights';
+import { SimpleTable2D } from '../components/ui/SimpleTable2D';
 
 type ChatItem = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -16,6 +17,8 @@ export default function HomePage() {
   const [chat, setChat] = useState<ChatItem[]>([{ role: 'system', content: 'Welcome to Poker Trainer. Describe your thought, then press Ask Coach.' }]);
   const [ranges, setRanges] = useState<{ hero: string; villain: string } | null>(null);
   const [pending, setPending] = useState(false);
+  const default2D = (process.env.NEXT_PUBLIC_SIMPLE_VIEW || '').toLowerCase() === 'true';
+  const [simple2D, setSimple2D] = useState<boolean>(default2D);
 
   useEffect(() => {
     if (!state) {
@@ -45,22 +48,33 @@ export default function HomePage() {
   return (
     <div className="layout">
       <div className="panel" style={{ padding: 0 }}>
-        <Canvas camera={{ position: [0, 4.5, 6], fov: 45 }}>
-          <Lights />
-          <PokerTable />
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Seat key={i} index={i} label={`P${i+1}`} />
-          ))}
-          {Array.from({ length: 6 }).map((_, i) => (
-            <HoleCards key={`h${i}`} seatIndex={i} faceUp={i === 0} />
-          ))}
-          <OrbitControls />
-        </Canvas>
+        {simple2D || !state ? (
+          <div style={{ width: '100%', height: 480 }}>
+            {state && (
+              <SimpleTable2D players={state.players} dealerIndex={state.dealerIndex} board={state.board} />
+            )}
+          </div>
+        ) : (
+          <Canvas camera={{ position: [0, 4.5, 6], fov: 45 }}>
+            <Lights />
+            <PokerTable />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Seat key={i} index={i} label={`P${i+1}`} />
+            ))}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <HoleCards key={`h${i}`} seatIndex={i} faceUp={i === 0} />
+            ))}
+            <OrbitControls />
+          </Canvas>
+        )}
       </div>
       <div className="right">
         <div className="panel">
           <div className="controls">
             <button onClick={() => startNewHand(Math.floor(Math.random() * 1e9))}>New Hand</button>
+            <label style={{ marginLeft: 12 }}>
+              <input type="checkbox" checked={simple2D} onChange={(e) => setSimple2D(e.target.checked)} /> Simple 2D view
+            </label>
             <label>
               Stage:
               <select value={stage} onChange={(e) => setStage(e.target.value as any)}>
