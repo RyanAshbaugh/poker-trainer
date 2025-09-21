@@ -7,7 +7,7 @@ export function decideSimpleAI(state: GameState): Action | null {
   if (actions.length === 0) return null;
   const toCall = state.currentBet - state.players[idx].contributedThisStreet;
   if (actions.includes('check')) return { playerIndex: idx, type: 'check' };
-  if (toCall <= Math.min(2, state.players[idx].stack) && actions.includes('call')) return { playerIndex: idx, type: 'call' };
+  if (actions.includes('call') && toCall <= Math.min(2, state.players[idx].stack)) return { playerIndex: idx, type: 'call' };
   return { playerIndex: idx, type: 'fold' };
 }
 

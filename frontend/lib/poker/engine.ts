@@ -86,6 +86,7 @@ export function initHand(prev?: Partial<GameState>, cfg?: Partial<TableConfig> &
     currentBet,
     minRaiseTo,
     pot,
+    remainingToAct: players.filter(p => p.inHand && !p.allIn).length,
   };
 }
 
@@ -115,12 +116,22 @@ function nextToActIndex(state: GameState): number {
   return state.toActIndex;
 }
 
+function firstActiveFrom(state: GameState, startIdx: number): number {
+  const n = state.players.length;
+  for (let i = 0; i < n; i++) {
+    const idx = (startIdx + i) % n;
+    const p = state.players[idx];
+    if (p.inHand && !p.allIn) return idx;
+  }
+  return startIdx;
+}
+
 function isBettingRoundClosed(state: GameState): boolean {
-  // Closed if all active players are all-in or equalized to currentBet with at least one action since last bet
-  const active = state.players.filter(p => p.inHand);
+  // Closed if remainingToAct cycles back to 0 and all contributions are equal to currentBet OR only one remains
+  const active = state.players.filter(p => p.inHand && !p.allIn);
   if (active.length <= 1) return true;
-  const needToAct = active.some(p => !p.allIn && p.contributedThisStreet < state.currentBet);
-  return !needToAct;
+  const everyoneCaughtUp = active.every(p => p.contributedThisStreet === state.currentBet);
+  return everyoneCaughtUp && state.remainingToAct <= 0;
 }
 
 export function applyAction(state: GameState, action: Action): GameState {
@@ -132,9 +143,10 @@ export function applyAction(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'fold':
       p.inHand = false;
+      s.remainingToAct -= 1;
       break;
     case 'check':
-      // only legal if toCall <= 0
+      s.remainingToAct -= 1;
       break;
     case 'call': {
       const amt = Math.min(toCall, p.stack);
@@ -143,6 +155,7 @@ export function applyAction(state: GameState, action: Action): GameState {
       p.contributedTotal += amt;
       s.pot += amt;
       if (p.stack === 0) p.allIn = true;
+      s.remainingToAct -= 1;
       break;
     }
     case 'raise': {
@@ -158,6 +171,8 @@ export function applyAction(state: GameState, action: Action): GameState {
       s.minRaiseTo = raiseTo + raiseSize; // next min raise-to
       s.currentBet = Math.max(s.currentBet, newTo);
       if (p.stack === 0) p.allIn = true;
+      // On a raise, reset remainingToAct to number of other active players
+      s.remainingToAct = s.players.filter(x => x.inHand && !x.allIn && x !== p).length;
       break;
     }
   }
@@ -194,8 +209,9 @@ export function advance(state: GameState): GameState {
   // New street betting variables
   s.currentBet = 0;
   s.minRaiseTo = 0;
-  // Postflop first to act is left of dealer
-  s.toActIndex = (s.dealerIndex + 1) % s.players.length;
+  // Postflop first to act is first active player left of dealer
+  s.toActIndex = firstActiveFrom(s, (s.dealerIndex + 1) % s.players.length);
+  s.remainingToAct = s.players.filter(p => p.inHand && !p.allIn).length;
   return s;
 }
 

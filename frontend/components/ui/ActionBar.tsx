@@ -5,9 +5,10 @@ import { legalActions } from '../../lib/poker/engine';
 type Props = {
   state: GameState | null;
   onAct: (a: Action) => void;
+  onNewHand?: () => void;
 };
 
-export function ActionBar({ state, onAct }: Props) {
+export function ActionBar({ state, onAct, onNewHand }: Props) {
   const [raiseTo, setRaiseTo] = useState<number>(0);
 
   const heroIndex = 0;
@@ -16,6 +17,17 @@ export function ActionBar({ state, onAct }: Props) {
   const toCall = state ? Math.max(0, state.currentBet - state.players[heroIndex].contributedThisStreet) : 0;
 
   if (!state) return null;
+
+  if (state && state.street === 'showdown') {
+    return (
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div><strong>Stage:</strong> showdown | <strong>Pot:</strong> {state.pot}</div>
+        {onNewHand && (
+          <button onClick={() => onNewHand()}>New Hand</button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

@@ -41,6 +41,7 @@ export type GameState = {
   currentBet: number;
   minRaiseTo: number;
   pot: number;
+  remainingToAct: number; // players left to act this round (resets on bet/raise)
 };
 
 export type ActionType = 'fold' | 'check' | 'call' | 'raise';

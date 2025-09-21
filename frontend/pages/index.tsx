@@ -71,7 +71,7 @@ export default function HomePage() {
           </div>
         )}
         <div style={{ padding: 8 }}>
-          <ActionBar state={state} onAct={act} />
+          <ActionBar state={state} onAct={act} onNewHand={() => startNewHand(Math.floor(Math.random() * 1e9))} />
         </div>
       </div>
       <div className="right">

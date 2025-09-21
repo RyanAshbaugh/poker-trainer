@@ -38,10 +38,15 @@ export function SimpleTable2D({ players, dealerIndex, board = [], pot = 0 }: Pro
           <ellipse cx={0} cy={0} rx={rx} ry={ry} fill="#2e7d32" stroke="#1b5e20" strokeWidth={8} />
         </g>
 
-        {/* Community cards placeholder */}
+        {/* Community cards */}
         <g transform={`translate(0, -20)`}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <rect key={i} x={-150 + i * 60} y={-30} width={50} height={70} rx={6} fill={i < board.length ? '#fff' : '#ccc'} stroke="#333" />
+            <g key={i} transform={`translate(${ -150 + i * 60 }, 0)`}>
+              <rect x={0} y={-30} width={50} height={70} rx={6} fill={i < board.length ? '#fff' : '#ccc'} stroke="#333" />
+              {i < board.length && (
+                <text x={25} y={5} textAnchor="middle" fontSize={16} fill="#000">{board[i]}</text>
+              )}
+            </g>
           ))}
         </g>
 
