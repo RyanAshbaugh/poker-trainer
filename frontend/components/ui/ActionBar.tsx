@@ -22,6 +22,11 @@ export function ActionBar({ state, onAct, onNewHand }: Props) {
     return (
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <div><strong>Stage:</strong> showdown | <strong>Pot:</strong> {state.pot}</div>
+        {state.winners && state.winners.length > 0 && (
+          <div>
+            <strong>Winners:</strong> {state.winners.map(w => `P${w.playerIndex + 1} ${w.description} (${w.hand.join(' ')}) +${w.amount}`).join(' | ')}
+          </div>
+        )}
         {onNewHand && (
           <button onClick={() => onNewHand()}>New Hand</button>
         )}

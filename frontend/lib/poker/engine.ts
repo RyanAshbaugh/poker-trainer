@@ -1,6 +1,7 @@
 import type { Action, Card, GameState, Player, Position, TableConfig } from './types';
 import { DEFAULT_CONFIG } from './types';
 import { createDeck, shuffle } from './cards';
+import { bestHand } from './evaluator';
 
 function seatPositions(numSeats: number, dealerIndex: number): Position[] {
   // 6-max: BTN, SB, BB, UTG, HJ, CO (clockwise)
@@ -37,7 +38,15 @@ export function initHand(prev?: Partial<GameState>, cfg?: Partial<TableConfig> &
   const handId = (prev?.handId ?? 0) + 1;
   const dealerIndex = prev?.dealerIndex !== undefined ? (prev!.dealerIndex + 1) % config.numSeats : 0;
   const deck = shuffle(createDeck(), config.rngSeed);
-  const players = createPlayers(config.numSeats, config.startingStack);
+  const players = (prev?.players && prev.players.length === config.numSeats)
+    ? prev.players.map(p => ({
+        ...p,
+        position: 'BTN' as Position,
+        inHand: true,
+        allIn: false,
+        contributedThisStreet: 0,
+      }))
+    : createPlayers(config.numSeats, config.startingStack);
   const pos = seatPositions(config.numSeats, dealerIndex);
   for (let i = 0; i < players.length; i++) players[i].position = pos[i];
 
@@ -204,6 +213,21 @@ export function advance(state: GameState): GameState {
     s.street = 'river';
   } else if (s.street === 'river') {
     s.street = 'showdown';
+    // Determine winners, simple single pot split (no side pots yet)
+    const contenders = s.players
+      .map((p, i) => ({ p, i }))
+      .filter(x => x.p.inHand);
+    const results = contenders.map(({ p, i }) => {
+      const seven = [...s.board, ...(p.hole || [])];
+      const best = bestHand(seven as Card[]);
+      return { i, score: best.score, hand: best.hand, description: best.description };
+    });
+    const max = Math.max(...results.map(r => r.score));
+    const winnersIdx = results.filter(r => r.score === max);
+    const each = s.pot / winnersIdx.length;
+    s.winners = winnersIdx.map(w => ({ playerIndex: w.i, amount: each, hand: w.hand, description: w.description }));
+    // Pay out
+    for (const w of s.winners) s.players[w.playerIndex].stack += w.amount;
   }
 
   // New street betting variables

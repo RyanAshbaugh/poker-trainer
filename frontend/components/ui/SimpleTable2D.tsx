@@ -74,8 +74,8 @@ export function SimpleTable2D({ players, dealerIndex, board = [], pot = 0 }: Pro
               <g transform={`translate(0, -50)`}>
                 {[0, 1].map((idx) => (
                   <g key={idx} transform={`translate(${idx === 0 ? -18 : 18}, 0)`}>
-                    <rect x={-15} y={-20} width={30} height={40} rx={4} fill={p.isHero ? '#fff' : '#ccc'} stroke="#333" />
-                    {p.isHero && p.hole && (
+                    <rect x={-15} y={-20} width={30} height={40} rx={4} fill={(p.isHero || board.length === 5) ? '#fff' : '#ccc'} stroke="#333" />
+                    {(p.isHero || board.length === 5) && p.hole && (
                       <text x={0} y={5} textAnchor="middle" fontSize={12} fill="#000">{p.hole[idx]}</text>
                     )}
                   </g>
