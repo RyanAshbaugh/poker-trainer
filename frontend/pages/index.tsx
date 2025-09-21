@@ -7,11 +7,12 @@ import { Seat } from '../components/three/Seat';
 import { HoleCards } from '../components/three/HoleCards';
 import { Lights } from '../components/three/Lights';
 import { SimpleTable2D } from '../components/ui/SimpleTable2D';
+import { ActionBar } from '../components/ui/ActionBar';
 
 type ChatItem = { role: 'system' | 'user' | 'assistant'; content: string };
 
 export default function HomePage() {
-  const { state, startNewHand } = useGame();
+  const { state, startNewHand, act } = useGame();
   const [stage, setStage] = useState<'preflop' | 'flop' | 'turn' | 'river'>('preflop');
   const [action, setAction] = useState('');
   const [chat, setChat] = useState<ChatItem[]>([{ role: 'system', content: 'Welcome to Poker Trainer. Describe your thought, then press Ask Coach.' }]);
@@ -67,6 +68,9 @@ export default function HomePage() {
             <OrbitControls />
           </Canvas>
         )}
+        <div style={{ padding: 8 }}>
+          <ActionBar state={state} onAct={act} />
+        </div>
       </div>
       <div className="right">
         <div className="panel">

@@ -17,6 +17,8 @@ export type Player = {
   inHand: boolean;
   allIn: boolean;
   isHero: boolean;
+  contributedThisStreet: number;
+  contributedTotal: number;
 };
 
 export type TableConfig = {
@@ -35,6 +37,17 @@ export type GameState = {
   deck: Card[];
   board: Card[];
   players: Player[];
+  toActIndex: number; // absolute seat index
+  currentBet: number;
+  minRaiseTo: number;
+  pot: number;
+};
+
+export type ActionType = 'fold' | 'check' | 'call' | 'raise';
+export type Action = {
+  playerIndex: number; // absolute seat index
+  type: ActionType;
+  amount?: number; // for raise-to only
 };
 
 export const DEFAULT_CONFIG: TableConfig = {

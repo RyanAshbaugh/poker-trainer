@@ -1,4 +1,4 @@
-import type { Card, GameState, Player, Position, TableConfig } from './types';
+import type { Action, Card, GameState, Player, Position, TableConfig } from './types';
 import { DEFAULT_CONFIG } from './types';
 import { createDeck, shuffle } from './cards';
 
@@ -25,6 +25,8 @@ function createPlayers(numSeats: number, startingStack: number): Player[] {
       inHand: true,
       allIn: false,
       isHero: i === 0,
+      contributedThisStreet: 0,
+      contributedTotal: 0,
     });
   }
   return players;
@@ -58,6 +60,21 @@ export function initHand(prev?: Partial<GameState>, cfg?: Partial<TableConfig> &
     }
   }
 
+  // Post blinds
+  const sbIndex = (dealerIndex + 1) % config.numSeats;
+  const bbIndex = (dealerIndex + 2) % config.numSeats;
+  players[sbIndex].stack -= config.smallBlind;
+  players[sbIndex].contributedThisStreet += config.smallBlind;
+  players[sbIndex].contributedTotal += config.smallBlind;
+  players[bbIndex].stack -= config.bigBlind;
+  players[bbIndex].contributedThisStreet += config.bigBlind;
+  players[bbIndex].contributedTotal += config.bigBlind;
+
+  const currentBet = config.bigBlind;
+  const minRaiseTo = config.bigBlind * 2;
+  const pot = config.smallBlind + config.bigBlind;
+  const toActIndex = (dealerIndex + 3) % config.numSeats; // UTG preflop
+
   return {
     handId,
     dealerIndex,
@@ -65,7 +82,121 @@ export function initHand(prev?: Partial<GameState>, cfg?: Partial<TableConfig> &
     deck: deck.slice(deckIndex),
     board: [],
     players,
+    toActIndex,
+    currentBet,
+    minRaiseTo,
+    pot,
   };
+}
+
+export function legalActions(state: GameState): ('fold'|'check'|'call'|'raise')[] {
+  const p = state.players[state.toActIndex];
+  if (!p.inHand || p.allIn) return [];
+  const toCall = state.currentBet - p.contributedThisStreet;
+  const actions: ('fold'|'check'|'call'|'raise')[] = [];
+  if (toCall <= 0) {
+    actions.push('check');
+    if (p.stack > 0) actions.push('raise');
+  } else {
+    actions.push('fold');
+    actions.push('call');
+    if (p.stack + Math.min(0, toCall) > toCall) actions.push('raise');
+  }
+  return actions;
+}
+
+function nextToActIndex(state: GameState): number {
+  const n = state.players.length;
+  for (let i = 1; i <= n; i++) {
+    const idx = (state.toActIndex + i) % n;
+    const p = state.players[idx];
+    if (p.inHand && !p.allIn) return idx;
+  }
+  return state.toActIndex;
+}
+
+function isBettingRoundClosed(state: GameState): boolean {
+  // Closed if all active players are all-in or equalized to currentBet with at least one action since last bet
+  const active = state.players.filter(p => p.inHand);
+  if (active.length <= 1) return true;
+  const needToAct = active.some(p => !p.allIn && p.contributedThisStreet < state.currentBet);
+  return !needToAct;
+}
+
+export function applyAction(state: GameState, action: Action): GameState {
+  const s: GameState = JSON.parse(JSON.stringify(state));
+  const p = s.players[action.playerIndex];
+  if (!p.inHand || p.allIn) return s;
+  const toCall = s.currentBet - p.contributedThisStreet;
+
+  switch (action.type) {
+    case 'fold':
+      p.inHand = false;
+      break;
+    case 'check':
+      // only legal if toCall <= 0
+      break;
+    case 'call': {
+      const amt = Math.min(toCall, p.stack);
+      p.stack -= amt;
+      p.contributedThisStreet += amt;
+      p.contributedTotal += amt;
+      s.pot += amt;
+      if (p.stack === 0) p.allIn = true;
+      break;
+    }
+    case 'raise': {
+      const raiseTo = Math.max(action.amount ?? s.minRaiseTo, s.minRaiseTo);
+      const need = raiseTo - p.contributedThisStreet;
+      const amt = Math.min(need, p.stack + Math.max(0, toCall));
+      const newTo = p.contributedThisStreet + amt;
+      const raiseSize = raiseTo - s.currentBet;
+      p.stack -= amt;
+      p.contributedThisStreet += amt;
+      p.contributedTotal += amt;
+      s.pot += amt;
+      s.minRaiseTo = raiseTo + raiseSize; // next min raise-to
+      s.currentBet = Math.max(s.currentBet, newTo);
+      if (p.stack === 0) p.allIn = true;
+      break;
+    }
+  }
+
+  if (isBettingRoundClosed(s)) {
+    return advance(s);
+  }
+  s.toActIndex = nextToActIndex(s);
+  return s;
+}
+
+export function advance(state: GameState): GameState {
+  const s: GameState = JSON.parse(JSON.stringify(state));
+  // Reset contributed this street
+  for (const p of s.players) p.contributedThisStreet = 0;
+
+  if (s.street === 'preflop') {
+    // Deal flop
+    s.board.push(s.deck[0], s.deck[1], s.deck[2]);
+    s.deck = s.deck.slice(3);
+    s.street = 'flop';
+  } else if (s.street === 'flop') {
+    s.board.push(s.deck[0]);
+    s.deck = s.deck.slice(1);
+    s.street = 'turn';
+  } else if (s.street === 'turn') {
+    s.board.push(s.deck[0]);
+    s.deck = s.deck.slice(1);
+    s.street = 'river';
+  } else if (s.street === 'river') {
+    s.street = 'showdown';
+  }
+
+  // New street betting variables
+  s.currentBet = 0;
+  s.minRaiseTo = 0;
+  // Postflop first to act is left of dealer
+  s.toActIndex = (s.dealerIndex + 1) % s.players.length;
+  return s;
 }
 
 
