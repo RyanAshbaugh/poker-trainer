@@ -56,17 +56,19 @@ export default function HomePage() {
             )}
           </div>
         ) : (
-          <Canvas camera={{ position: [0, 4.5, 6], fov: 45 }}>
-            <Lights />
-            <PokerTable />
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Seat key={i} index={i} label={`P${i+1}`} />
-            ))}
-            {Array.from({ length: 6 }).map((_, i) => (
-              <HoleCards key={`h${i}`} seatIndex={i} faceUp={i === 0} />
-            ))}
-            <OrbitControls />
-          </Canvas>
+          <div style={{ width: '100%', height: 480 }}>
+            <Canvas camera={{ position: [0, 4.5, 6], fov: 45 }}>
+              <Lights />
+              <PokerTable />
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Seat key={i} index={i} label={`P${i+1}`} />
+              ))}
+              {Array.from({ length: 6 }).map((_, i) => (
+                <HoleCards key={`h${i}`} seatIndex={i} faceUp={i === 0} />
+              ))}
+              <OrbitControls />
+            </Canvas>
+          </div>
         )}
         <div style={{ padding: 8 }}>
           <ActionBar state={state} onAct={act} />
