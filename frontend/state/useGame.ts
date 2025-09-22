@@ -33,6 +33,11 @@ export function useGame(initial?: { config?: Partial<TableConfig> }) {
   // Auto-play opponents with a short delay between actions so UI updates between streets
   useEffect(() => {
     if (!state) return;
+    // Expose minimal read-only hints for UI highlights/last action in 2D view
+    (window as any).__POKER_STATE_TOACT__ = state.toActIndex;
+    if ((state as any)._lastAction) {
+      (window as any).__POKER_LAST_ACTION__ = (state as any)._lastAction;
+    }
     if (state.street === 'showdown') return;
     if (state.toActIndex === 0) return; // hero's turn
     const timer = setTimeout(() => {
@@ -40,7 +45,7 @@ export function useGame(initial?: { config?: Partial<TableConfig> }) {
       if (ai) {
         dispatch({ type: 'APPLY', action: ai });
       }
-    }, 400);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [state]);
 

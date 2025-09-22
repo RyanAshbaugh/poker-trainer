@@ -52,6 +52,13 @@ export type Action = {
   amount?: number; // for raise-to only
 };
 
+export type LastAction = {
+  playerIndex: number;
+  type: ActionType;
+  paid: number; // chips moved to pot for this action
+  toAmount?: number; // for raise-to displayed amount
+};
+
 export const DEFAULT_CONFIG: TableConfig = {
   numSeats: 6,
   smallBlind: 1,

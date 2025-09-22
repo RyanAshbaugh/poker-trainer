@@ -1,4 +1,4 @@
-import type { Action, Card, GameState, Player, Position, TableConfig } from './types';
+import type { Action, Card, GameState, Player, Position, TableConfig, LastAction } from './types';
 import { DEFAULT_CONFIG } from './types';
 import { createDeck, shuffle } from './cards';
 import { bestHand } from './evaluator';
@@ -96,6 +96,7 @@ export function initHand(prev?: Partial<GameState>, cfg?: Partial<TableConfig> &
     minRaiseTo,
     pot,
     remainingToAct: players.filter(p => p.inHand && !p.allIn).length,
+    winners: undefined,
   };
 }
 
@@ -148,6 +149,7 @@ export function applyAction(state: GameState, action: Action): GameState {
   const p = s.players[action.playerIndex];
   if (!p.inHand || p.allIn) return s;
   const toCall = s.currentBet - p.contributedThisStreet;
+  let last: LastAction = { playerIndex: action.playerIndex, type: action.type, paid: 0 };
 
   switch (action.type) {
     case 'fold':
@@ -164,6 +166,7 @@ export function applyAction(state: GameState, action: Action): GameState {
       p.contributedTotal += amt;
       s.pot += amt;
       if (p.stack === 0) p.allIn = true;
+      last.paid = amt;
       s.remainingToAct -= 1;
       break;
     }
@@ -180,6 +183,8 @@ export function applyAction(state: GameState, action: Action): GameState {
       s.minRaiseTo = raiseTo + raiseSize; // next min raise-to
       s.currentBet = Math.max(s.currentBet, newTo);
       if (p.stack === 0) p.allIn = true;
+      last.paid = amt;
+      last.toAmount = raiseTo;
       // On a raise, reset remainingToAct to number of other active players
       s.remainingToAct = s.players.filter(x => x.inHand && !x.allIn && x !== p).length;
       break;
@@ -187,9 +192,13 @@ export function applyAction(state: GameState, action: Action): GameState {
   }
 
   if (isBettingRoundClosed(s)) {
-    return advance(s);
+    const advanced = advance(s);
+    // carry last action across frames? We will attach it temporarily for UI via any cast
+    (advanced as any)._lastAction = last;
+    return advanced;
   }
   s.toActIndex = nextToActIndex(s);
+  (s as any)._lastAction = last;
   return s;
 }
 

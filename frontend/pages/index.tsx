@@ -18,7 +18,7 @@ export default function HomePage() {
   const [chat, setChat] = useState<ChatItem[]>([{ role: 'system', content: 'Welcome to Poker Trainer. Describe your thought, then press Ask Coach.' }]);
   const [ranges, setRanges] = useState<{ hero: string; villain: string } | null>(null);
   const [pending, setPending] = useState(false);
-  const default2D = (process.env.NEXT_PUBLIC_SIMPLE_VIEW || '').toLowerCase() === 'true';
+  const default2D = (process.env.NEXT_PUBLIC_SIMPLE_VIEW || 'true').toLowerCase() === 'true';
   const [simple2D, setSimple2D] = useState<boolean>(default2D);
 
   useEffect(() => {
