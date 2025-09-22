@@ -59,6 +59,8 @@ export type LastAction = {
   toAmount?: number; // for raise-to displayed amount
 };
 
+export type HistoryEvent = { street: Street; text: string };
+
 export const DEFAULT_CONFIG: TableConfig = {
   numSeats: 6,
   smallBlind: 1,

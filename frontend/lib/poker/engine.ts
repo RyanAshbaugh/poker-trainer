@@ -1,4 +1,4 @@
-import type { Action, Card, GameState, Player, Position, TableConfig, LastAction } from './types';
+import type { Action, Card, GameState, Player, Position, TableConfig, LastAction, HistoryEvent } from './types';
 import { DEFAULT_CONFIG } from './types';
 import { createDeck, shuffle } from './cards';
 import { bestHand } from './evaluator';
@@ -150,14 +150,17 @@ export function applyAction(state: GameState, action: Action): GameState {
   if (!p.inHand || p.allIn) return s;
   const toCall = s.currentBet - p.contributedThisStreet;
   let last: LastAction = { playerIndex: action.playerIndex, type: action.type, paid: 0 };
+  const history: HistoryEvent[] = (s as any)._history || [];
 
   switch (action.type) {
     case 'fold':
       p.inHand = false;
       s.remainingToAct -= 1;
+      history.push({ street: s.street, text: `${p.isHero ? 'Hero' : p.position}: folds` });
       break;
     case 'check':
       s.remainingToAct -= 1;
+      history.push({ street: s.street, text: `${p.isHero ? 'Hero' : p.position}: checks` });
       break;
     case 'call': {
       const amt = Math.min(toCall, p.stack);
@@ -167,6 +170,7 @@ export function applyAction(state: GameState, action: Action): GameState {
       s.pot += amt;
       if (p.stack === 0) p.allIn = true;
       last.paid = amt;
+      history.push({ street: s.street, text: `${p.isHero ? 'Hero' : p.position}: calls ${amt}` });
       s.remainingToAct -= 1;
       break;
     }
@@ -185,6 +189,7 @@ export function applyAction(state: GameState, action: Action): GameState {
       if (p.stack === 0) p.allIn = true;
       last.paid = amt;
       last.toAmount = raiseTo;
+      history.push({ street: s.street, text: `${p.isHero ? 'Hero' : p.position}: raises to ${raiseTo}` });
       // On a raise, reset remainingToAct to number of other active players
       s.remainingToAct = s.players.filter(x => x.inHand && !x.allIn && x !== p).length;
       break;
@@ -195,10 +200,12 @@ export function applyAction(state: GameState, action: Action): GameState {
     const advanced = advance(s);
     // carry last action across frames? We will attach it temporarily for UI via any cast
     (advanced as any)._lastAction = last;
+    (advanced as any)._history = history;
     return advanced;
   }
   s.toActIndex = nextToActIndex(s);
   (s as any)._lastAction = last;
+  (s as any)._history = history;
   return s;
 }
 
@@ -212,14 +219,17 @@ export function advance(state: GameState): GameState {
     s.board.push(s.deck[0], s.deck[1], s.deck[2]);
     s.deck = s.deck.slice(3);
     s.street = 'flop';
+    ((s as any)._history ||= []).push({ street: s.street, text: `*** FLOP *** ${s.board.slice(0,3).join(' ')}` });
   } else if (s.street === 'flop') {
     s.board.push(s.deck[0]);
     s.deck = s.deck.slice(1);
     s.street = 'turn';
+    ((s as any)._history ||= []).push({ street: s.street, text: `*** TURN *** ${s.board.slice(0,4).join(' ')}` });
   } else if (s.street === 'turn') {
     s.board.push(s.deck[0]);
     s.deck = s.deck.slice(1);
     s.street = 'river';
+    ((s as any)._history ||= []).push({ street: s.street, text: `*** RIVER *** ${s.board.slice(0,5).join(' ')}` });
   } else if (s.street === 'river') {
     s.street = 'showdown';
     // Determine winners, simple single pot split (no side pots yet)
@@ -237,6 +247,10 @@ export function advance(state: GameState): GameState {
     s.winners = winnersIdx.map(w => ({ playerIndex: w.i, amount: each, hand: w.hand, description: w.description }));
     // Pay out
     for (const w of s.winners) s.players[w.playerIndex].stack += w.amount;
+    ((s as any)._history ||= []).push({ street: s.street, text: `*** SHOW DOWN ***` });
+    for (const w of s.winners) {
+      ((s as any)._history).push({ street: s.street, text: `${s.players[w.playerIndex].isHero ? 'Hero' : s.players[w.playerIndex].position}: wins ${w.amount} with ${w.description} (${w.hand.join(' ')})` });
+    }
   }
 
   // New street betting variables

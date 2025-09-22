@@ -8,6 +8,7 @@ import { HoleCards } from '../components/three/HoleCards';
 import { Lights } from '../components/three/Lights';
 import { SimpleTable2D } from '../components/ui/SimpleTable2D';
 import { ActionBar } from '../components/ui/ActionBar';
+import { HandHistory } from '../components/ui/HandHistory';
 
 type ChatItem = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -121,6 +122,11 @@ export default function HomePage() {
               <div key={i} className="cell" />
             ))}
           </div>
+        </div>
+
+        <div className="panel" style={{ overflow: 'auto' }}>
+          <h3>Hand History</h3>
+          <HandHistory history={(state as any)?._history} />
         </div>
       </div>
     </div>

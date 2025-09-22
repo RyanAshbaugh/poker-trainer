@@ -30,9 +30,15 @@ export function SimpleTable2D({ players, dealerIndex, board = [], pot = 0 }: Pro
   // Determine to-act player by reading a custom global set in reducer side-channel
   const toActIndex = (typeof window !== 'undefined' && (window as any).__POKER_STATE_TOACT__) ?? -1;
   const lastAction = (typeof window !== 'undefined' && (window as any).__POKER_LAST_ACTION__) as { playerIndex: number; type: string; paid: number; toAmount?: number } | undefined;
+  const thinkingIndex = (typeof window !== 'undefined' && (window as any).__POKER_THINKING_INDEX__) ?? -1;
+  const thinkingStart = (typeof window !== 'undefined' && (window as any).__POKER_THINKING_START__) ?? 0;
+  const thinkingUntil = (typeof window !== 'undefined' && (window as any).__POKER_THINKING_UNTIL__) ?? 0;
+  const holdIndex = (typeof window !== 'undefined' && (window as any).__POKER_HOLD_INDEX__) ?? -1;
+  const holdUntil = (typeof window !== 'undefined' && (window as any).__POKER_HOLD_UNTIL__) ?? 0;
 
   const [chips, setChips] = useState<ChipAnim[]>([]);
   const nextId = useRef(1);
+  const [tick, setTick] = useState(0);
 
   // Trigger chip animation when someone pays chips
   useEffect(() => {
@@ -45,6 +51,21 @@ export function SimpleTable2D({ players, dealerIndex, board = [], pot = 0 }: Pro
     const anim: ChipAnim = { id, x0: x, y0: y, x1: 0, y1: 0, start: performance.now(), dur: 600, amount: lastAction.paid };
     setChips((cs) => [...cs.filter(c => c.start > performance.now() - 1500), anim]);
   }, [lastAction]);
+
+  // Drive re-renders during active windows so timers update UI precisely
+  useEffect(() => {
+    let raf = 0;
+    const loop = () => {
+      const now = performance.now();
+      const anyActive = (now < thinkingUntil && now >= thinkingStart) || now < holdUntil || chips.length > 0;
+      if (anyActive) {
+        setTick(t => (t + 1) % 1000);
+        raf = requestAnimationFrame(loop);
+      }
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [thinkingStart, thinkingUntil, holdUntil, chips.length]);
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -93,7 +114,16 @@ export function SimpleTable2D({ players, dealerIndex, board = [], pot = 0 }: Pro
           const isDealer = i === dealerIndex;
           return (
             <g key={p.id} transform={`translate(${x}, ${y})`}>
-              <circle r={28} fill={toActIndex === i ? '#616161' : '#424242'} stroke={toActIndex === i ? '#ffca28' : '#212121'} strokeWidth={toActIndex === i ? 4 : 2} />
+              {(() => {
+                const now = performance.now();
+                const holdingActive = holdIndex >= 0 && now < holdUntil;
+                const thinkingActive = thinkingIndex >= 0 && now >= thinkingStart && now < thinkingUntil;
+                const highlightIndex = holdingActive ? holdIndex : (thinkingActive ? thinkingIndex : toActIndex);
+                const highlighted = highlightIndex === i;
+                return (
+                  <circle r={28} fill={highlighted ? '#616161' : '#424242'} stroke={highlighted ? '#ffca28' : '#212121'} strokeWidth={highlighted ? 4 : 2} />
+                );
+              })()}
               {isDealer && (
                 <circle r={10} fill="#fff" stroke="#555" strokeWidth={1} cx={-38} cy={-22} />
               )}
@@ -103,14 +133,21 @@ export function SimpleTable2D({ players, dealerIndex, board = [], pot = 0 }: Pro
               <text x={0} y={74} textAnchor="middle" fontSize={12} fill="#000">{`Bet: ${p.contributedThisStreet}`}</text>
 
               {/* Last action bubble */}
-              {lastAction && lastAction.playerIndex === i && (
+              {(() => {
+                const now = performance.now();
+                const holdingActive = lastAction && lastAction.playerIndex === i && now < holdUntil;
+                const thinkingActive = thinkingIndex === i && now >= thinkingStart && now < thinkingUntil && !holdingActive;
+                if (!holdingActive && !thinkingActive) return null;
+                const text = thinkingActive ? '...' : `${lastAction!.type}${lastAction!.paid ? ` ${lastAction!.paid}` : ''}`;
+                return (
                 <g transform="translate(0, 92)">
                   <rect x={-38} y={-14} width={76} height={18} rx={8} fill="#fffde7" stroke="#fdd835" />
                   <text x={0} y={0} textAnchor="middle" fontSize={12} fill="#795548">
-                    {lastAction.type}{lastAction.paid ? ` ${lastAction.paid}` : ''}
+                    {text}
                   </text>
                 </g>
-              )}
+                );
+              })()}
 
               {/* Hole cards near each seat */}
               <g transform={`translate(0, -50)`}>
