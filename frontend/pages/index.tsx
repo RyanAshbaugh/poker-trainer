@@ -9,6 +9,7 @@ import { Lights } from '../components/three/Lights';
 import { SimpleTable2D } from '../components/ui/SimpleTable2D';
 import { ActionBar } from '../components/ui/ActionBar';
 import { HandHistory } from '../components/ui/HandHistory';
+import { HandAnalysis } from '../components/ui/HandAnalysis';
 
 type ChatItem = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -49,30 +50,45 @@ export default function HomePage() {
 
   return (
     <div className="layout">
-      <div className="panel" style={{ padding: 0 }}>
-        {simple2D || !state ? (
-          <div style={{ width: '100%', height: 480 }}>
+      <div className="left">
+        <div className="panel" style={{ padding: 0 }}>
+          {simple2D || !state ? (
+            <div style={{ width: '100%', height: 480 }}>
+              {state && (
+                <SimpleTable2D players={state.players} dealerIndex={state.dealerIndex} board={state.board} pot={state.pot} />
+              )}
+            </div>
+          ) : (
+            <div style={{ width: '100%', height: 480 }}>
+              <Canvas camera={{ position: [0, 4.5, 6], fov: 45 }}>
+                <Lights />
+                <PokerTable />
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Seat key={i} index={i} label={`P${i+1}`} />
+                ))}
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <HoleCards key={`h${i}`} seatIndex={i} faceUp={i === 0} />
+                ))}
+                <OrbitControls />
+              </Canvas>
+            </div>
+          )}
+          <div style={{ padding: 8 }}>
+            <ActionBar state={state} onAct={act} onNewHand={() => startNewHand(Math.floor(Math.random() * 1e9))} />
+          </div>
+        </div>
+
+        <div className="under">
+          <div className="panel" style={{ overflow: 'auto' }}>
+            <h3>Hand History</h3>
+            <HandHistory history={(state as any)?._history} />
+          </div>
+          <div className="panel" style={{ overflow: 'auto' }}>
+            <h3>Hand Analysis</h3>
             {state && (
-              <SimpleTable2D players={state.players} dealerIndex={state.dealerIndex} board={state.board} pot={state.pot} />
+              <HandAnalysis players={state.players} board={state.board} pot={state.pot} bigBlind={2} currentBet={state.currentBet} />
             )}
           </div>
-        ) : (
-          <div style={{ width: '100%', height: 480 }}>
-            <Canvas camera={{ position: [0, 4.5, 6], fov: 45 }}>
-              <Lights />
-              <PokerTable />
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Seat key={i} index={i} label={`P${i+1}`} />
-              ))}
-              {Array.from({ length: 6 }).map((_, i) => (
-                <HoleCards key={`h${i}`} seatIndex={i} faceUp={i === 0} />
-              ))}
-              <OrbitControls />
-            </Canvas>
-          </div>
-        )}
-        <div style={{ padding: 8 }}>
-          <ActionBar state={state} onAct={act} onNewHand={() => startNewHand(Math.floor(Math.random() * 1e9))} />
         </div>
       </div>
       <div className="right">
@@ -123,11 +139,7 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-
-        <div className="panel" style={{ overflow: 'auto' }}>
-          <h3>Hand History</h3>
-          <HandHistory history={(state as any)?._history} />
-        </div>
+        
       </div>
     </div>
   );
